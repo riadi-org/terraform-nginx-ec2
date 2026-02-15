@@ -1,14 +1,25 @@
-name: Terraform Deploy EC2 Nginx
+name: Terraform EC2 Nginx
 
 on:
   push:
     branches:
       - main
 
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Choose action"
+        required: true
+        default: "apply"
+        type: choice
+        options:
+          - apply
+          - destroy
+
 jobs:
   terraform:
-    name: Terraform Apply
     runs-on: ubuntu-latest
+    environment: production   # jika pakai environment secret
 
     permissions:
       contents: read
@@ -17,7 +28,7 @@ jobs:
       AWS_REGION: ap-northeast-2
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Configure AWS Credentials
@@ -39,7 +50,13 @@ jobs:
         run: terraform validate
 
       - name: Terraform Plan
+        if: github.event.inputs.action != 'destroy'
         run: terraform plan
 
       - name: Terraform Apply
+        if: github.event_name == 'push' || github.event.inputs.action == 'apply'
         run: terraform apply -auto-approve
+
+      - name: Terraform Destroy
+        if: github.event.inputs.action == 'destroy'
+        run: terraform destroy -auto-approve
